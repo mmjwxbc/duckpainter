@@ -25,6 +25,8 @@ from models.ddpm_dit_model import DiT_models
 from torchvision.utils import save_image
 from diffusion import create_diffusion
 from diffusers import AutoencoderKL
+from torchvision.datasets import Flowers102
+from torch.utils.data import ConcatDataset
 #################################################################################
 #                             Training Helper Functions                         #
 #################################################################################
@@ -70,7 +72,7 @@ def main(args):
     assert torch.cuda.is_available(), "Training currently requires at least one GPU."
 
 
-    device = torch.device(f"cuda:6")
+    device = torch.device(f"cuda:5")
 
     os.makedirs(args.results_dir, exist_ok=True)  # Make results folder (holds all experiment subfolders)
     # experiment_index = len(glob(f"{args.results_dir}/*"))
@@ -102,8 +104,12 @@ def main(args):
         transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
     ])
-    dataset = torchvision.datasets.Flowers102(root="./data", split="train", transform=tfm, download=True)
+    dataset = Flowers102(root="./data", split="train", transform=tfm, download=True)
+    train = Flowers102("data/", split="train", download=True, transform=tfm)
+    val   = Flowers102("data/", split="val",   transform=tfm)
+    test  = Flowers102("data/", split="test",  transform=tfm)
 
+    dataset = ConcatDataset([train, val, test])
     loader = DataLoader(
         dataset,
         batch_size=64,

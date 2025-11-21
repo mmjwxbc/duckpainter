@@ -406,6 +406,25 @@ class CFGVectorFieldODE(ODE):
         - y: (bs,)
         """
         guided_vector_field = self.net(x, t, y)
-        unguided_y = torch.ones_like(y) * 10
+        unguided_y = torch.ones_like(y) * 102
         unguided_vector_field = self.net(x, t, unguided_y)
+        return (1 - self.guidance_scale) * unguided_vector_field + self.guidance_scale * guided_vector_field
+    
+class CFGXODE(ODE):
+    def __init__(self, net: ConditionalVectorField, guidance_scale: float = 1.0):
+        self.net = net
+        self.guidance_scale = guidance_scale
+
+    def drift_coefficient(self, x: torch.Tensor, t: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+        - x: (bs, c, h, w)
+        - t: (bs, 1, 1, 1)
+        - y: (bs,)
+        """
+        guided_x_field = self.net(x, t, y)
+        guided_vector_field = (guided_x_field - x) / (1 - t).clamp_min(1e-3)
+        unguided_y = torch.ones_like(y) * 102
+        unguided_x_field = self.net(x, t, unguided_y)
+        unguided_vector_field = (unguided_x_field - x) / (1 - t).clamp_min(1e-3)
         return (1 - self.guidance_scale) * unguided_vector_field + self.guidance_scale * guided_vector_field
